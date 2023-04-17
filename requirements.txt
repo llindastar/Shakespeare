@@ -1,0 +1,6 @@
+altair==4.2.2
+nltk==3.8.1
+numpy==1.21.6
+pandas==1.1.5
+streamlit==1.21.0
+wordcloud==1.8.2.2
