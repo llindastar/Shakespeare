@@ -8,6 +8,7 @@ from nltk.corpus import stopwords
 import nltk
 nltk.download('punkt')
 import string
+nltk.download('stopwords')
 
 st.markdown('''
 # Analyzing Shakespeare Texts
@@ -51,9 +52,6 @@ if image != " ":
     tab1, tab2, tab3 = st.tabs(['Word Cloud', 'Bar Chart', 'View Text'])
 
     with tab1:
-        # Tokenization without punctuation
-        tokens = [word for word in nltk.word_tokenize(raw_text) if word not in string.punctuation]
-
         # Tokenization without punctuation and tokens starting with an apostrophe
         tokens = [word for word in nltk.word_tokenize(raw_text) if word not in string.punctuation and not word.startswith("'")]
 
@@ -69,7 +67,7 @@ if image != " ":
 
         # Generate the word cloud image
         image_height = image_width // 2
-        wordcloud = WordCloud(width=image_width, height=image_height,  # Use the image_width variable from the sidebar
+        wordcloud = WordCloud(width=image_width, height=image_height,
                             background_color='white',
                             stopwords=stop_words,
                             max_words=max_word,
@@ -77,15 +75,15 @@ if image != " ":
                             random_state=random_state
                             ).generate_from_frequencies(filtered_word_frequencies)
 
-        # Display the generated image
-        st.image(wordcloud.to_array(), use_column_width=False)  # Use the image_width variable from the sidebar
+        # Display the generated image with the specified width from the sidebar
+        st.image(wordcloud.to_array(), width=image_width, use_column_width=False)
 
     with tab2:
         st.subheader("Bar Chart")
         # Tokenization without punctuation and tokens starting with an apostrophe
         tokens = [word for word in nltk.word_tokenize(raw_text) if word not in string.punctuation and not word.startswith("'")]
 
-        # Remove stopwords from the tokens
+        # Remove stopwords from the tokens if the checkbox is unchecked
         if remove_stop_words:
             stop_words = set(nltk_stop_words)
             tokens = [word for word in tokens if word.lower() not in stop_words]
@@ -93,23 +91,33 @@ if image != " ":
         # Calculate word frequencies
         word_frequencies = nltk.FreqDist(tokens)
 
-        # Sort the word frequencies by count in descending order
-        sorted_word_frequencies = {k: v for k, v in sorted(word_frequencies.items(), key=lambda item: item[1], reverse=True)}
-
-        # Filter the top 24 most frequent words
-        filtered_word_frequencies = {word: count for i, (word, count) in enumerate(sorted_word_frequencies.items()) if i < 24}
+        # Filter the words based on the minimum count specified in the sidebar
+        filtered_word_frequencies = {word: count for word, count in word_frequencies.items() if count >= min_countwords}
 
         # Create a dataframe from the filtered word frequencies
         word_freq_df = pd.DataFrame(list(filtered_word_frequencies.items()), columns=['word', 'count'])
 
         # Create a bar chart using Altair
         bar_chart = alt.Chart(word_freq_df).mark_bar().encode(
-        y=alt.Y('word:N', sort='-x', title='Word'),
-        x=alt.X('count:Q', title='Count'),
-        text=alt.Text('count:Q')
-        ).properties(width=120)
+            y=alt.Y('word:N', sort=None, title='Word'),
+            x=alt.X('count:Q', title='Count'),
+            text=alt.Text('count:Q')
+        ).properties()
 
-        st.altair_chart(bar_chart, use_container_width=True)
+        # Create a text layer to display the count above each bar
+        text_layer = alt.Chart(word_freq_df).mark_text(align='left', baseline='bottom', dy=5).encode(
+            y=alt.Y('word:N', sort='-x'),
+            x=alt.X('count:Q'),
+            text=alt.Text('count:Q')
+        )
+
+        # Combine the bar chart and the text layer
+        combined_chart = bar_chart + text_layer
+
+        st.altair_chart(combined_chart, use_container_width=True)
+
+     
+
         
     with tab3:
         st.subheader("All Text")
